@@ -11,7 +11,7 @@
 </style>
 </head>
 <body>
-<canvas id="c" tabindex="0"></canvas>
+<canvas id="c" tabindex="0" autofocus></canvas>
 <script>
 'use strict';
 /* =====================================================================
@@ -2932,15 +2932,35 @@ function drawOverlays() {
     if (state === 'dq') drawDQ();
     if (state === 'results' && results) drawResults();
   }
+  drawFocusHint();
+}
+function drawFocusHint() {
+  if (touchSeen || (kbSeen && hasKbFocus())) return;
+  const s = 'Haz clic en el juego para jugar', y = scene === 'play' ? 296 : 12;
+  ctx.font = '900 22px ' + FONT; const w = ctx.measureText(s).width + 50, a = 0.8 + 0.2 * Math.sin(time * 6);
+  ctx.fillStyle = 'rgba(255,209,102,' + (0.92 * a) + ')'; rrect(W / 2 - w / 2, y, w, 40, 20); ctx.fill();
+  txt(s, W / 2, y + 21, 22, '#10142e', 'center', '900');
+  addUI(0, 0, W, H, () => { focusGame(); kbSeen = true; });
 }
 /* =====================================================================
    ENTRADA
    ===================================================================== */
 const KEYL = ['ArrowLeft', 'KeyA'], KEYR = ['ArrowRight', 'KeyD'];
-window.addEventListener('keydown', e => {
+const KEY_FALLBACK = { ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight', Up: 'ArrowUp', Down: 'ArrowDown',
+  a: 'KeyA', d: 'KeyD', w: 'KeyW', s: 'KeyS', p: 'KeyP', m: 'KeyM', ' ': 'Space', Spacebar: 'Space', Enter: 'Enter', Escape: 'Escape', Esc: 'Escape' };
+const GAME_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'Enter', 'Escape', 'KeyA', 'KeyD', 'KeyW', 'KeyS', 'KeyP', 'KeyM']);
+const keyCode = e => { const k = e.key && e.key.length === 1 ? e.key.toLowerCase() : e.key; return (e.code && GAME_KEYS.has(e.code)) ? e.code : (KEY_FALLBACK[k] || e.code || ''); };
+let kbSeen = false;                       // ¿ha llegado ya alguna tecla al juego?
+let touchSeen = false;                    // ¿se ha tocado la pantalla con el dedo? (entonces no hace falta el aviso de teclado)
+try { touchSeen = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches); } catch (e) { }
+const hasKbFocus = () => { try { return document.hasFocus() && (document.activeElement === canvas || document.activeElement === document.body); } catch (e) { return true; } };
+function focusGame() { try { if (window.parent !== window) window.focus(); canvas.focus({ preventScroll: true }); } catch (e) {} }
+function onKeyDown(e) {
+  if (e.__atl) return; e.__atl = true;
+  const c = keyCode(e);
+  if (!GAME_KEYS.has(c)) return;
+  e.preventDefault(); kbSeen = true;
   SFX.init();
-  const c = e.code;
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'Enter', 'Escape'].includes(c)) e.preventDefault();
   if (c === 'KeyM') { if (!e.repeat) SFX.setMuted(!SFX.muted); return; }
   if (e.repeat) return;
   if (c === 'Escape') { escape(); return; }
@@ -2957,13 +2977,26 @@ window.addEventListener('keydown', e => {
   else if (c === 'KeyP' || c === 'ArrowDown') passPress();
   else if (c === 'ArrowUp' || c === 'KeyW') { if (scene === 'play') { jumpFlash = 0.15; jumpPress(); } }
   else if (c === 'Space' || c === 'Enter') { if (scene === 'play' && state !== 'results' && state !== 'dq') jumpFlash = 0.15; action(); }
-});
-window.addEventListener('keyup', e => {
-  if (KEYL.includes(e.code)) keyDown.L = false; else if (KEYR.includes(e.code)) keyDown.R = false;
-});
+}
+function onKeyUp(e) {
+  if (e.__atlu) return; e.__atlu = true;
+  const c = keyCode(e);
+  if (GAME_KEYS.has(c)) e.preventDefault();
+  if (KEYL.includes(c)) keyDown.L = false; else if (KEYR.includes(c)) keyDown.R = false;
+}
+window.addEventListener('keydown', onKeyDown, true); document.addEventListener('keydown', onKeyDown, true);
+window.addEventListener('keyup', onKeyUp, true); document.addEventListener('keyup', onKeyUp, true);
 window.addEventListener('blur', () => { keyDown.L = keyDown.R = false; });
+window.addEventListener('focus', focusGame);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) focusGame(); });
+['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(t => { window.addEventListener(t, focusGame, true); document.addEventListener(t, focusGame, true); });
+window.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') touchSeen = true; }, true);
+window.addEventListener('pointermove', () => { try { if (!document.hasFocus()) focusGame(); } catch (e) { } }, true);
+// un iframe puede perder el foco al cargar: reintenta unos instantes (si el padre lo permite)
+[50, 300, 1000, 2500].forEach(ms => setTimeout(focusGame, ms));
+canvas.addEventListener('pointerenter', focusGame);
 canvas.addEventListener('pointerdown', e => {
-  SFX.init(); e.preventDefault();
+  SFX.init(); e.preventDefault(); focusGame();
   const r = canvas.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
   for (let i = uiRects.length - 1; i >= 0; i--) { const b = uiRects[i]; if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) { b.fn(); return; } }
   if (scene === 'play' && y < 600 && state !== 'results' && state !== 'dq') { jumpFlash = 0.15; jumpPress(); }
@@ -2984,7 +3017,7 @@ function frame(now) {
   fpsCount++; fpsT += dt; if (fpsT >= 1) { fps = fpsCount / fpsT; fpsCount = 0; fpsT = 0; }
   requestAnimationFrame(frame);
 }
-resize();
+resize(); focusGame();
 scene = 'title'; prepareIdle('100');
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 

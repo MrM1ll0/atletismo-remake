@@ -7,10 +7,13 @@
 <style>
   html,body{margin:0;height:100%;background:#05070f;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
   body{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#12183a,#03040a)}
-  canvas{display:block;image-rendering:auto;outline:none;touch-action:none}
+  canvas{display:block;image-rendering:auto;outline:none;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+  #rot{display:none;position:fixed;left:0;right:0;top:0;padding:8px 12px;text-align:center;font:700 15px system-ui,sans-serif;color:#10142e;background:#ffd166;z-index:5;pointer-events:none}
+  @media (orientation:portrait) and (pointer:coarse){#rot{display:block}}
 </style>
 </head>
 <body>
+<div id="rot">📱 Gira el teléfono (horizontal) para jugar mejor</div>
 <canvas id="c" tabindex="0" autofocus></canvas>
 <script>
 'use strict';
@@ -950,13 +953,13 @@ const SFX = {
     s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
   },
   step(vol) { if (!this.ctx) return; this.burst(0.05, vol * 0.5, 'bandpass', 900 + Math.random() * 500, 1.1); this.tone(110, 0.07, vol * 0.5, 'sine', 0, 55); },
-  tick(side) { this.tone(side ? 440 : 330, 0.05, 0.035, 'triangle'); },
+  tick(side) { this.tone(side ? 440 : 330, 0.05, 0.05, 'triangle'); },
   pistol() {
     if (!this.ctx) return;
-    this.burst(0.35, 1.0, 'highpass', 700, 0.5, 0, true);
-    this.burst(0.7, 0.7, 'lowpass', 900, 0.7, 0, true);
-    this.tone(180, 0.22, 0.9, 'sine', 0, 38);
-    this.burst(0.2, 0.35, 'bandpass', 2400, 1, 0.13, true);
+    this.burst(0.35, 0.7, 'highpass', 700, 0.5, 0, true);
+    this.burst(0.7, 0.45, 'lowpass', 900, 0.7, 0, true);
+    this.tone(180, 0.22, 0.6, 'sine', 0, 38);
+    this.burst(0.2, 0.3, 'bandpass', 2400, 1, 0.13, true);
   },
   cue(n) { this.tone(n === 1 ? 392 : 523, 0.28, 0.12, 'sine'); this.tone(n === 1 ? 784 : 1046, 0.2, 0.03, 'sine'); },
   buzzer() { this.tone(110, 0.7, 0.22, 'sawtooth'); this.tone(116, 0.7, 0.18, 'square'); },
@@ -974,18 +977,56 @@ const SFX = {
     });
   },
   fanfare(kind) {
-    if (kind === 'record') this.notes([[523, 0, 0.13], [659, 0.13, 0.13], [784, 0.26, 0.13], [1047, 0.39, 0.3], [784, 0.7, 0.13], [1047, 0.83, 0.13], [1319, 0.96, 0.7], [1047, 1.0, 0.7], [784, 1.0, 0.7]], 'square', 0.07);
-    else if (kind === 'win') this.notes([[523, 0, 0.14], [659, 0.14, 0.14], [784, 0.28, 0.14], [1047, 0.42, 0.55], [784, 0.42, 0.55]], 'square', 0.07);
-    else if (kind === 'ok') this.notes([[392, 0, 0.16], [523, 0.16, 0.16], [659, 0.32, 0.5]], 'triangle', 0.1);
-    else this.notes([[440, 0, 0.22], [370, 0.24, 0.22], [294, 0.48, 0.6]], 'triangle', 0.1);
+    if (kind === 'record') this.notes([[523, 0, 0.13], [659, 0.13, 0.13], [784, 0.26, 0.13], [1047, 0.39, 0.3], [784, 0.7, 0.13], [1047, 0.83, 0.13], [1319, 0.96, 0.7], [1047, 1.0, 0.7], [784, 1.0, 0.7]], 'square', 0.1);
+    else if (kind === 'win') this.notes([[523, 0, 0.14], [659, 0.14, 0.14], [784, 0.28, 0.14], [1047, 0.42, 0.55], [784, 0.42, 0.55]], 'square', 0.1);
+    else if (kind === 'ok') this.notes([[392, 0, 0.16], [523, 0.16, 0.16], [659, 0.32, 0.5]], 'triangle', 0.09);
+    else this.notes([[440, 0, 0.22], [370, 0.24, 0.22], [294, 0.48, 0.6]], 'triangle', 0.05);
   },
   thud() { this.tone(95, 0.16, 0.5, 'sine', 0, 45); this.burst(0.1, 0.35, 'bandpass', 1500, 1.4); },
-  whoosh() { this.burst(0.28, 0.16, 'bandpass', 1400, 0.8); },
+  whoosh() { this.burst(0.28, 0.3, 'bandpass', 1400, 0.8); },
   sand() { this.burst(0.35, 0.45, 'lowpass', 1100, 0.6); this.tone(80, 0.18, 0.3, 'sine', 0, 40); },
   ding() { this.tone(988, 0.18, 0.12, 'sine'); this.tone(1319, 0.28, 0.1, 'sine', 0.1); },
   nav() { this.tone(660, 0.07, 0.07, 'triangle'); },
   intro() { this.notes([[392, 0, 0.1], [523, 0.1, 0.1], [659, 0.2, 0.1], [784, 0.3, 0.3]], 'square', 0.04); },
-  cheer() { if (!this.ctx) return; this.burst(1.6, 0.35, 'bandpass', 900, 0.4, 0, true); }
+  cheer() { if (!this.ctx) return; this.burst(1.6, 0.35, 'bandpass', 900, 0.4, 0, true); this.clap(1.6); },
+  clap(dur) { if (!this.ctx) return; for (let i = 0; i < Math.floor(dur * 9); i++) this.burst(0.04, 0.08 + Math.random() * 0.08, 'highpass', 2500 + Math.random() * 1500, 0.8, 0.1 + i * (dur / (dur * 9)) * (0.8 + Math.random() * 0.4)); },
+  groan() {   // "uuuh" del público: ruido filtrado que baja de tono
+    if (!this.ctx) return; const c = this.ctx, t = c.currentTime;
+    const s = c.createBufferSource(); s.buffer = this.noise; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(260, t + 0.9);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.45, t + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+    s.connect(f); f.connect(g); g.connect(this.master); g.connect(this.rev); s.start(t, Math.random()); s.stop(t + 1.05);
+  },
+  spin(w) { this.burst(0.22, 0.14 + 0.08 * Math.min(1, w / 2), 'bandpass', 450 + 350 * Math.min(1.5, w), 1.6); },          // vuelta del martillo
+  javThrow() { this.burst(0.3, 0.35, 'bandpass', 2200, 1.2); this.tone(260, 0.5, 0.08, 'sawtooth', 0, 1100); },              // lanzamiento de jabalina
+  stick() { this.tone(140, 0.12, 0.35, 'sine', 0, 60); this.burst(0.07, 0.3, 'bandpass', 3200, 2); },                          // jabalina clavada
+  clack() { this.burst(0.06, 0.5, 'bandpass', 1800, 2); this.tone(220, 0.12, 0.3, 'square', 0, 90); },                         // garrocha clavada
+  barHit() { this.tone(1760, 0.25, 0.08, 'triangle'); this.tone(2349, 0.3, 0.05, 'triangle', 0.03); this.burst(0.08, 0.2, 'highpass', 3000, 1); },
+  mat() { this.burst(0.3, 0.3, 'lowpass', 500, 0.5); this.tone(70, 0.2, 0.3, 'sine', 0, 40); },                               // colchoneta
+  /* ---- música de menú (arpegio retro sintetizado, ~118 bpm) ---- */
+  musicOn: false, musicG: null, musicT: 0, musicStep: 0, musicTimer: null,
+  music(on) {
+    if (!this.ctx) return;
+    if (!this.musicG) { this.musicG = this.ctx.createGain(); this.musicG.gain.value = 0; this.musicG.connect(this.master); }
+    if (on === this.musicOn) return; this.musicOn = on;
+    this.musicG.gain.setTargetAtTime(on ? 0.5 : 0, this.ctx.currentTime, on ? 0.4 : 0.25);
+    if (on) { this.musicT = this.ctx.currentTime + 0.1; this.musicStep = 0; if (!this.musicTimer) this.musicTimer = setInterval(() => this.musicTick(), 120); }
+    else if (this.musicTimer) { const tm = this.musicTimer; setTimeout(() => { if (!this.musicOn) { clearInterval(tm); if (this.musicTimer === tm) this.musicTimer = null; } }, 1500); }
+  },
+  musicTick() {
+    if (!this.ctx || !this.musicOn) return; const c = this.ctx, SP = 60 / 118 / 2;
+    const CH = [[130.8, 261.6, 329.6, 392, 523.3], [98, 196, 246.9, 293.7, 392], [110, 220, 261.6, 329.6, 440], [87.3, 174.6, 220, 261.6, 349.2]];
+    const ARP = [1, 2, 3, 4, 3, 2, 3, 2], LEAD = [4, 0, 3, 0, 4, 0, 2, 0];
+    if (this.musicT < c.currentTime - 0.1) this.musicT = c.currentTime + 0.05;
+    while (this.musicT < c.currentTime + 0.35) {
+      const i = this.musicStep++, ch = CH[Math.floor(i / 8) % 4], k = i % 8, t = this.musicT; this.musicT += SP;
+      const n = (f, d, v, type, dt) => { const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(g); g.connect(this.musicG); o.start(t); o.stop(t + d + 0.03); };
+      n(ch[ARP[k]], SP * 0.9, 0.035, 'square');
+      if (k === 0 || k === 4) n(ch[0], SP * 1.8, 0.10, 'triangle');
+      if (LEAD[k] && Math.floor(i / 32) % 2) n(ch[LEAD[k]] * 2, SP * 1.4, 0.03, 'square');
+      if (k % 2) { const s = c.createBufferSource(); s.buffer = this.noise; const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 6000; const g = c.createGain(); g.gain.setValueAtTime(0.02, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); s.connect(f); f.connect(g); g.connect(this.musicG); s.start(t, Math.random()); s.stop(t + 0.06); }
+    }
+  }
 };
 try { SFX.muted = localStorage.getItem('atletismo100.mute') === '1'; } catch (e) { }
 
@@ -1005,7 +1046,7 @@ const EVENTS = {
   'sa': { id: 'sa', name: 'SALTO ALTO', short: 'Salto alto', len: 400, vmax: 8.4, kind: 'field', better: 'high', unit: 'm' },
   'ma': { id: 'ma', name: 'LANZAMIENTO DE MARTILLO', short: 'Martillo', len: 400, vmax: 0, kind: 'field', better: 'high', unit: 'm' },
   'sg': { id: 'sg', name: 'SALTO CON GARROCHA', short: 'Garrocha', len: 400, vmax: 10.0, kind: 'field', better: 'high', unit: 'm' },
-  '400': { id: '400', name: '400 METROS LISOS', short: '400 m lisos', len: 400, vmax: 9.4, topScale: 0.78, hurdles: false, kind: 'race', better: 'low', tmax: 100 }
+  '400': { id: '400', name: '400 METROS LISOS', short: '400 m lisos', len: 400, vmax: 9.4, topScale: 0.76, hurdles: false, kind: 'race', better: 'low', tmax: 100 }
 };
 EVENTS['100'].tmax = 35; EVENTS['110'].tmax = 42;
 const BEST_KEYS = { '100': 'atletismo100.best', '110': 'atletismo.best.110', 'sl': 'atletismo.best.sl', 'ja': 'atletismo.best.ja', 'sa': 'atletismo.best.sa', 'ma': 'atletismo.best.ma', 'sg': 'atletismo.best.sg', '400': 'atletismo.best.400' };
@@ -1104,9 +1145,9 @@ function playerTargetSpeed(now, dt) {
   P.quality += (q - P.quality) * Math.min(1, dt * 8);
   const base = VMAX * (1 - Math.exp(-r / 3.2)) / (1 - Math.exp(-10 / 3.2));
   if (EV === '400') {   // resistencia: ritmo alto la gasta, ritmo sostenido la conserva
-    const hi = Math.max(0, r - 6.3);
-    P.stam = clamp(P.stam - 0.034 * hi * dt + (hi === 0 ? 0.012 * dt : 0), 0, 1);
-    return base * P.quality * (1 - 0.12 * P.stumble) * (0.7 + 0.3 * Math.pow(P.stam, 0.7));
+    const hi = Math.max(0, r - 6.6);
+    P.stam = clamp(P.stam - 0.02 * hi * dt + (hi === 0 ? 0.014 * dt : 0), 0, 1);
+    return base * P.quality * (1 - 0.12 * P.stumble) * (0.84 + 0.16 * Math.pow(P.stam, 0.7));
   }
   return base * P.quality * (1 - 0.12 * P.stumble);
 }
@@ -1193,7 +1234,7 @@ function updateRace(dt) {
   if (state !== 'run') return;
   if (player.finished) {
     const all = runners.every(r => r.finished);
-    if (t > race.resultsAt && (all || t > race.resultsAt + 1.6)) showResults();
+    if (t > race.resultsAt && (all || t > race.resultsAt + (EV === '400' ? 7 : 1.6))) showResults();
   } else if (t > EVENTS[EV].tmax) showResults();
 }
 function showResults() {
@@ -1243,6 +1284,7 @@ function update(dt) {
     else if (state && state.charAt(0) === 'f') lv = 0.1;
     else if (state === 'dq') lv = 0.13;
     SFX.setCrowd(lv);
+    SFX.music(scene !== 'play');
   }
 }
 /* =====================================================================
@@ -1891,7 +1933,7 @@ function jvLaunch() {
   const dist = Math.max(3, fe.dist), ang = fe.ang * Math.PI / 180;
   const Hpk = clamp(dist * Math.tan(ang) / 4, 1.5, 22);
   flightStart('jav', fe.xt + 0.5, 2.0, JV_LINE + dist, Hpk, 0.9 + dist * 0.032, dist);
-  fe.launched = true; state = 'fair'; stateTime = 0; SFX.tone(300, 0.5, 0.1, 'sawtooth', 0, 900); SFX.whoosh();
+  fe.launched = true; state = 'fair'; stateTime = 0; SFX.javThrow();
 }
 function jvEnd(foul, text, col, reason) {
   fe.res.push(foul ? null : fe.dist); fe.text = text; fe.textCol = col; fe.reason = reason || '';
@@ -1923,7 +1965,7 @@ function jvUpdate(dt) {
       if (f.landed) {
         fe.marks.push({ x: f.xl, d: fe.dist, foul: fe.foul });
         for (let i = 0; i < 10; i++) addDust(f.xl * PPM + (Math.random() - 0.5) * 20, p.lane, 3, (Math.random() - 0.3) * 120, 30 + Math.random() * 70, 14, 0.8, 0.55, 'sand');
-        SFX.thud();
+        SFX.stick();
         if (fe.foul) jvEnd(true, '¡NULO!', '#ff5468', 'pisaste la línea');
         else jvEnd(false, fe.dist.toFixed(2) + ' m', '#7dffb0');
       }
@@ -1990,7 +2032,7 @@ function hmUpdate(dt) {
     fe.spinT += dt;
     fe.w = Math.max(0, fe.w * Math.exp(-0.42 * dt));
     fe.phi += 2 * Math.PI * fe.w * dt;
-    if (Math.floor(prev / (2 * Math.PI)) !== Math.floor(fe.phi / (2 * Math.PI)) && fe.w > 0.4) { SFX.whoosh(); fe.turns++; }
+    if (Math.floor(prev / (2 * Math.PI)) !== Math.floor(fe.phi / (2 * Math.PI)) && fe.w > 0.4) { SFX.spin(fe.w); fe.turns++; }
     P.rate = fe.w * 4;
     hmPose(p);
     if (fe.spinT > 9) { fe.dist = 0; fe.foul = true; hmEnd(true, '¡NULO!', '#ff5468', 'te saliste del círculo'); }
@@ -2046,7 +2088,7 @@ function barPass() {
 function barOutcome(ok, text, reason) {
   fe.clear = ok; fe.text = text; fe.textCol = ok ? '#7dffb0' : '#ff5468'; fe.reason = reason || '';
   state = 'fland'; stateTime = 0; fe.log[fe.hi].push(ok ? 'O' : 'X');
-  if (ok) { fe.bestH = Math.max(fe.bestH, barH()); SFX.cheer(); } else { fe.fails++; SFX.buzzer(); }
+  if (ok) { fe.bestH = Math.max(fe.bestH, barH()); SFX.cheer(); } else { fe.fails++; SFX.groan(); }
 }
 function barAdvance() {
   if (fe.clear) { fe.hi++; fe.tries = 0; if (fe.hi >= barList().length) return barFinish(); barReset(); }
@@ -2083,11 +2125,11 @@ function hjUpdate(dt) {
       fe.crossed = true;
       fe.Hc = 1.0 + (S - 1.0) * 4 * ub * (1 - ub);
       fe.ok = fe.Hc >= barH() && !fe.crash;
-      if (!fe.ok) { fe.bar.fall = fe.t; SFX.thud(); shake = Math.max(shake, 0.15); }
+      if (!fe.ok) { fe.bar.fall = fe.t; SFX.barHit(); shake = Math.max(shake, 0.15); }
     }
     if (u >= 1) {
       p.opose = null; p.ljH = 0;
-      SFX.thud();
+      SFX.mat();
       if (!fe.crossed) { fe.bar.fall = fe.t; barOutcome(false, '¡FALLO!', 'no llegaste al listón'); }
       else if (fe.ok) barOutcome(true, '¡' + barH().toFixed(2) + ' m!', '');
       else barOutcome(false, '¡FALLO!', 'derribas el listón');
@@ -2115,7 +2157,7 @@ function pvJump() {
     fe.Hc0 = 2.5 + 0.34 * p.v - fe.plantPen;
     const lead = clamp((fe.Hc0 - 1.0) / (PV_L - 0.2), 0.5, 0.97);
     fe.psiE = Math.PI - Math.asin(lead);
-    state = 'fvault'; stateTime = 0; fe.s = 0; SFX.thud(); SFX.whoosh();
+    state = 'fvault'; stateTime = 0; fe.s = 0; SFX.clack(); SFX.whoosh();
   } else if (state === 'fvault') {   // soltar
     const dev = Math.abs(fe.s - PV_SREL);
     fe.relS = fe.s; fe.relPen = 3.0 * Math.max(0, dev - 0.04);
@@ -2180,11 +2222,11 @@ function pvUpdate(dt) {
     p.opose = pose; p.orot = r0;
     placeHip(p, pose, x, y);
     // listón
-    if (!fe.crossed && x >= PV_BAR) { fe.crossed = true; if (!fe.ok) { fe.bar.fall = fe.t; SFX.thud(); shake = Math.max(shake, 0.15); } }
+    if (!fe.crossed && x >= PV_BAR) { fe.crossed = true; if (!fe.ok) { fe.bar.fall = fe.t; SFX.barHit(); shake = Math.max(shake, 0.15); } }
     // garrocha: cae hacia atrás
     const q = clamp((t - 0.05) / 0.9, 0, 1);
     fe.pole = { B: fe.B, psi: lerp(fe.rpsi, 0.12, q * q), bend: fe.rbend * (1 - smoothS(t / 0.25)), free: true, gy: 0 };
-    if (t >= tot) { p.orot = 0; SFX.thud(); if (fe.ok) barOutcome(true, '¡' + barH().toFixed(2) + ' m!', ''); else barOutcome(false, '¡FALLO!', 'derribas el listón'); }
+    if (t >= tot) { p.orot = 0; SFX.mat(); if (fe.ok) barOutcome(true, '¡' + barH().toFixed(2) + ' m!', ''); else barOutcome(false, '¡FALLO!', 'derribas el listón'); }
   } else if (state === 'fland') {
     if (fe.skip) { p.opose = null; p.equip = null; p.orot = 0; p.ljH = 0; p.v = Math.max(0, p.v - 4 * dt); p.x += p.v * dt; if (p.v > 0.5) animRunner(p, dt); if (stateTime > 1.8) { fe.skip = false; barAdvance(); } return; }
     if (fe.pole && fe.pole.free) { const q = clamp(stateTime / 0.6, 0, 1); fe.pole = { B: fe.B, psi: lerp(0.12, 0.0, q), bend: 0, free: true, gy: 0 }; }
@@ -2300,6 +2342,14 @@ function drawHurdles(lane, far) {
 /* ---------- elementos de interfaz ---------- */
 const keyDown = { L: false, R: false };
 const btnL = { x: 18, y: 664, w: 300, h: 48 }, btnR = { x: W - 318, y: 664, w: 300, h: 48 }, btnJ = { x: W - 318, y: 604, w: 300, h: 50 }, muteB = { x: W - 62, y: 12, w: 46, h: 40 };
+const fsB = { x: W - 112, y: 12, w: 46, h: 40 }, menuB = { x: W - 162, y: 12, w: 46, h: 40 };
+function layoutButtons() {   // botones grandes para el pulgar en pantallas táctiles
+  const T = touchSeen;
+  Object.assign(btnL, T ? { x: 16, y: 584, w: 310, h: 124 } : { x: 18, y: 664, w: 300, h: 48 });
+  Object.assign(btnR, T ? { x: W - 326, y: 584, w: 310, h: 124 } : { x: W - 318, y: 664, w: 300, h: 48 });
+  Object.assign(btnJ, T ? { x: W - 326, y: 456, w: 310, h: 116 } : { x: W - 318, y: 604, w: 300, h: 50 });
+  Object.assign(btnP, T ? { x: 16, y: 456, w: 310, h: 116 } : { x: W - 318, y: 548, w: 300, h: 44 });
+}
 function drawButton(b, side, label, pressed) {
   ctx.fillStyle = pressed ? 'rgba(80,150,255,0.85)' : 'rgba(255,255,255,0.10)';
   rrect(b.x, b.y, b.w, b.h, 14); ctx.fill();
@@ -2311,7 +2361,7 @@ function drawButton(b, side, label, pressed) {
     else { const cx = b.x + b.w - 36; ctx.moveTo(cx + 12, cy); ctx.lineTo(cx - 8, cy - 14); ctx.lineTo(cx - 8, cy + 14); }
     ctx.fill();
   }
-  txt(label, b.x + b.w / 2, cy, 20, '#fff', 'center', '800');
+  txt(touchSeen ? label.replace(/\s*\(.*\)/, '') : label, b.x + b.w / 2, cy, touchSeen ? 28 : 20, '#fff', 'center', '800');
 }
 function pill(x, y, w, h, fill, stroke) { ctx.fillStyle = fill; rrect(x, y, w, h, 14); ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); } }
 function drawMute() {
@@ -2322,6 +2372,25 @@ function drawMute() {
   else { ctx.beginPath(); ctx.arc(mx + 8, my, 6, -0.9, 0.9); ctx.stroke(); ctx.beginPath(); ctx.arc(mx + 8, my, 11, -0.9, 0.9); ctx.stroke(); }
   txt('M', W - 39, 62, 10, 'rgba(255,255,255,0.5)', 'center', '800');
   addUI(muteB.x, muteB.y, muteB.w, muteB.h, () => SFX.setMuted(!SFX.muted));
+  // pantalla completa
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; rrect(fsB.x, fsB.y, fsB.w, fsB.h, 10); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.2; const fx = fsB.x + 12, fy = fsB.y + 10;
+  [[0, 0, 1, 1], [22, 0, -1, 1], [0, 20, 1, -1], [22, 20, -1, -1]].forEach(c => { ctx.beginPath(); ctx.moveTo(fx + c[0] + 8 * c[2], fy + c[1]); ctx.lineTo(fx + c[0], fy + c[1]); ctx.lineTo(fx + c[0], fy + c[1] + 8 * c[3]); ctx.stroke(); });
+  txt('F', fsB.x + fsB.w / 2, 62, 10, 'rgba(255,255,255,0.5)', 'center', '800');
+  addUI(fsB.x, fsB.y, fsB.w, fsB.h, toggleFullscreen);
+  if (scene === 'play' && state !== 'results') {
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; rrect(menuB.x, menuB.y, menuB.w, menuB.h, 10); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(menuB.x + 12, menuB.y + 12 + i * 8); ctx.lineTo(menuB.x + 34, menuB.y + 12 + i * 8); } ctx.stroke();
+    txt('ESC', menuB.x + menuB.w / 2, 62, 10, 'rgba(255,255,255,0.5)', 'center', '800');
+    addUI(menuB.x, menuB.y, menuB.w, menuB.h, escape);
+  }
+}
+function toggleFullscreen() {
+  try {
+    const d = document, el = d.documentElement;
+    if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+    else (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  } catch (e) { }
 }
 function bannerAt(s, col, scale) {
   ctx.save(); ctx.translate(W / 2, 192); ctx.scale(scale, scale);
@@ -2332,6 +2401,7 @@ function bannerAt(s, col, scale) {
   ctx.restore();
 }
 function hintLine(s) {
+  if (touchSeen) s = s.replace(/ESPACIO \/ ↑ \/ toca la pantalla/, 'toca la pantalla').replace(/ESPACIO/g, 'ACCIÓN').replace(/← →/g, 'IZQ / DER').replace(/ \/ A \/ D/, '').replace(/ \(o A \/ D\)/, '').replace(/ · P = pasar( altura)?/, '').replace(/\s+/g, ' ');
   const a = 0.75 + 0.25 * Math.sin(time * 8);
   ctx.font = '900 24px ' + FONT; const w = ctx.measureText(s).width + 44;
   ctx.fillStyle = 'rgba(6,9,34,' + 0.62 * a + ')'; rrect(W / 2 - w / 2, 244, w, 40, 20); ctx.fill();
@@ -2640,6 +2710,7 @@ function hintFor() {
 }
 const rT = () => (typeof race === 'object' && race) ? race.t : 0;
 function drawHUD() {
+  layoutButtons();
   if (scene !== 'play') { drawMute(); return; }
   const cfg = EVENTS[EV], race = isRaceEv() ? 1 : 0, isLJ = EV === 'sl', fld = isFieldState();
   const tg = ctx.createLinearGradient(0, 0, 0, 78); tg.addColorStop(0, 'rgba(3,5,22,0.85)'); tg.addColorStop(1, 'rgba(3,5,22,0)');
@@ -2729,7 +2800,7 @@ function drawHUD() {
   else if (state === 'fland' && fe.text) bannerAt(fe.text, fe.textCol, 1 + Math.max(0, 0.3 - stateTime) * 1.2);
   if (state === 'run' && rT() >= 0.9 && rT() < 5 && !player.finished && P.firstTap === null) hintLine(HURD ? '¡ALTERNA ← →  y salta las vallas con ESPACIO!' : '¡ALTERNA  ←  →  (o A / D) lo más rápido que puedas!');
   else if (HURD && state === 'run' && rT() < 8 && P.firstTap !== null && !player.finished && player.hits === 0 && player.nh < 2) hintLine('ESPACIO / ↑ / toca la pantalla = saltar valla');
-  else if (EV === '400' && state === 'run' && rT() > 3 && rT() < 12) hintLine('Ritmo sostenido (~6 toques/s): ¡gestiona tu RESISTENCIA!');
+  else if (EV === '400' && state === 'run' && rT() > 3 && rT() < 12) hintLine('Ritmo sostenido (~7 toques/s): ¡gestiona tu RESISTENCIA!');
   else { const h = hintFor(); if (h) hintLine(h); }
 }
 
@@ -2947,8 +3018,8 @@ function drawFocusHint() {
    ===================================================================== */
 const KEYL = ['ArrowLeft', 'KeyA'], KEYR = ['ArrowRight', 'KeyD'];
 const KEY_FALLBACK = { ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight', Up: 'ArrowUp', Down: 'ArrowDown',
-  a: 'KeyA', d: 'KeyD', w: 'KeyW', s: 'KeyS', p: 'KeyP', m: 'KeyM', ' ': 'Space', Spacebar: 'Space', Enter: 'Enter', Escape: 'Escape', Esc: 'Escape' };
-const GAME_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'Enter', 'Escape', 'KeyA', 'KeyD', 'KeyW', 'KeyS', 'KeyP', 'KeyM']);
+  f: 'KeyF', a: 'KeyA', d: 'KeyD', w: 'KeyW', s: 'KeyS', p: 'KeyP', m: 'KeyM', ' ': 'Space', Spacebar: 'Space', Enter: 'Enter', Escape: 'Escape', Esc: 'Escape' };
+const GAME_KEYS = new Set(['KeyF', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'Enter', 'Escape', 'KeyA', 'KeyD', 'KeyW', 'KeyS', 'KeyP', 'KeyM']);
 const keyCode = e => { const k = e.key && e.key.length === 1 ? e.key.toLowerCase() : e.key; return (e.code && GAME_KEYS.has(e.code)) ? e.code : (KEY_FALLBACK[k] || e.code || ''); };
 let kbSeen = false;                       // ¿ha llegado ya alguna tecla al juego?
 let touchSeen = false;                    // ¿se ha tocado la pantalla con el dedo? (entonces no hace falta el aviso de teclado)
@@ -2962,6 +3033,7 @@ function onKeyDown(e) {
   e.preventDefault(); kbSeen = true;
   SFX.init();
   if (c === 'KeyM') { if (!e.repeat) SFX.setMuted(!SFX.muted); return; }
+  if (c === 'KeyF') { if (!e.repeat) toggleFullscreen(); return; }
   if (e.repeat) return;
   if (c === 'Escape') { escape(); return; }
   if (scene === 'title' || scene === 'select') {
@@ -2989,6 +3061,7 @@ window.addEventListener('keyup', onKeyUp, true); document.addEventListener('keyu
 window.addEventListener('blur', () => { keyDown.L = keyDown.R = false; });
 window.addEventListener('focus', focusGame);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) focusGame(); });
+['pointerup', 'touchend', 'click'].forEach(t => window.addEventListener(t, () => SFX.init(), true));   // iOS/Safari desbloquean el audio en touchend/click
 ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(t => { window.addEventListener(t, focusGame, true); document.addEventListener(t, focusGame, true); });
 window.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') touchSeen = true; }, true);
 window.addEventListener('pointermove', () => { try { if (!document.hasFocus()) focusGame(); } catch (e) { } }, true);

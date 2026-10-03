@@ -1040,7 +1040,7 @@ let marksCue = false;
 let EV = '100', scene = 'title';
 const EVENTS = {
   '100': { id: '100', name: '100 METROS LISOS', short: '100 m lisos', len: 100, vmax: 11.9, topScale: 1.0, hurdles: false, kind: 'race', better: 'low' },
-  '110': { id: '110', name: '110 M VALLAS', short: '110 m vallas', len: 110, vmax: 9.9, topScale: 0.8, hurdles: true, kind: 'race', better: 'low' },
+  '110': { id: '110', name: '110 M VALLAS', short: '110 m vallas', len: 110, vmax: 9.9, topScale: 0.84, hurdles: true, kind: 'race', better: 'low' },
   'sl': { id: 'sl', name: 'SALTO LARGO', short: 'Salto largo', len: 400, vmax: 11.2, kind: 'jump', better: 'high', unit: 'm' },
   'ja': { id: 'ja', name: 'JABALINA', short: 'Jabalina', len: 400, vmax: 11.0, kind: 'field', better: 'high', unit: 'm' },
   'sa': { id: 'sa', name: 'SALTO ALTO', short: 'Salto alto', len: 400, vmax: 8.4, kind: 'field', better: 'high', unit: 'm' },
@@ -1065,6 +1065,12 @@ const LANE_CODES = ['USA', 'JAM', 'BRA', 'CHI'];
 const LANES = LANE_CODES.map(c => ({ code: c, name: KITS[c].name, col: KITS[c].top }));
 const BIBS = ['12', '7', '10', '4'];
 const CPU_TOPS = [10.5, 11.0, 11.45];
+// dificultad: 0 = fácil, 1 = normal, 2 = difícil (se guarda en localStorage)
+const DIFF_NAMES = ['FÁCIL', 'NORMAL', 'DIFÍCIL'];
+let DIFF = 1;
+try { const d = parseInt(localStorage.getItem('atletismo.diff')); if (d >= 0 && d <= 2) DIFF = d; } catch (e) { }
+const dk = () => DIFF - 1;                              // -1, 0, +1
+function cycleDiff() { DIFF = (DIFF + 1) % 3; try { localStorage.setItem('atletismo.diff', String(DIFF)); } catch (e) { } }
 const CPU_PF = [0.16, 0.10, 0.06];
 
 function makeRunner(lane, isPlayer, top) {
@@ -1078,7 +1084,7 @@ function makeRunner(lane, isPlayer, top) {
 }
 function newRunners() {
   const cfg = EVENTS[EV], ts = cfg.topScale || 1;
-  const tops = CPU_TOPS.map((v, i) => ({ v: v * ts, pf: CPU_PF[i] }));
+  const tops = CPU_TOPS.map((v, i) => ({ v: v * ts * (1 + 0.018 * dk()), pf: CPU_PF[i] * (1 - 0.35 * dk()) }));
   for (let i = 2; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [tops[i], tops[j]] = [tops[j], tops[i]]; }
   runners = [];
   for (let lane = 0; lane < 4; lane++) {
@@ -1668,11 +1674,12 @@ function startEvent(ev) {
 const restartEvent = () => startEvent(EV);
 function menuMove(d) {
   SFX.nav();
-  const n = scene === 'title' ? 3 : SELECT_ORDER.length;
+  const n = scene === 'title' ? 4 : SELECT_ORDER.length;
   menu.sel = ((menu.sel + d) % n + n) % n;
 }
 function menuNav(side) { menuMove(side ? 1 : -1); }
 function titleConfirm() {
+  if (menu.sel === 3) { cycleDiff(); SFX.nav(); return; }
   if (menu.sel < 2) { tour.active = true; tourReset(menu.sel === 0 ? ORDER_FULL : ORDER_CLASSIC); startEvent(tour.order[0]); }
   else { tour.active = false; menu.sel = 0; goSelect(); }
   SFX.ding();
@@ -1803,7 +1810,7 @@ function ljUpdate(dt) {
 }
 function gaussN() { let s = 0; for (let i = 0; i < 6; i++) s += Math.random(); return (s - 3) / 0.7071; }
 function ljFinish() {
-  const cpuMeans = CPU_TOPS.map(v => 7.35 + (v - 10.5) / 0.95 * 0.75);
+  const cpuMeans = CPU_TOPS.map(v => 7.35 + (v - 10.5) / 0.95 * 0.75 + 0.15 * dk());
   const order = [0, 1, 2]; for (let i = 2; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
   const arr = [];
   const myBest = lj.res.reduce((m, d) => d !== null && d > m ? d : m, 0);
@@ -1976,7 +1983,7 @@ function jvUpdate(dt) {
   }
 }
 function jvFinish() {
-  const means = shuffled([66, 71, 76]), arr = [];
+  const means = shuffled([66, 71, 76]).map(m => m + 2.5 * dk()), arr = [];
   const mine = fe.res.reduce((m, d) => d !== null && d > m ? d : m, 0);
   arr.push({ isPlayer: true, code: player.code, name: 'TÚ', lane: player.lane, best: mine, att: fe.res.slice() });
   cpuLanes().forEach((l, i) => {
@@ -2053,7 +2060,7 @@ function hmUpdate(dt) {
   }
 }
 function hmFinish() {
-  const means = shuffled([60, 66, 72]), arr = [];
+  const means = shuffled([60, 66, 72]).map(m => m + 2.5 * dk()), arr = [];
   const mine = fe.res.reduce((m, d) => d !== null && d > m ? d : m, 0);
   arr.push({ isPlayer: true, code: player.code, name: 'TÚ', lane: player.lane, best: mine, att: fe.res.slice() });
   cpuLanes().forEach((l, i) => {
@@ -2250,7 +2257,7 @@ function simBar(heights, ability, steep) {
   return { best, fails };
 }
 function barFinish() {
-  const ev = fe.ev, list = barList(), abil = ev === 'sa' ? shuffled([2.12, 2.22, 2.31]) : shuffled([5.05, 5.35, 5.62]), steep = ev === 'sa' ? 0.03 : 0.08;
+  const ev = fe.ev, list = barList(), abil = ev === 'sa' ? shuffled([2.12, 2.22, 2.31]).map(a => a + 0.04 * dk()) : shuffled([5.05, 5.35, 5.62]).map(a => a + 0.12 * dk()), steep = ev === 'sa' ? 0.03 : 0.08;
   const arr = [];
   arr.push({ isPlayer: true, code: player.code, name: 'TÚ', lane: player.lane, best: fe.bestH, fails: fe.fails });
   cpuLanes().forEach((l, i) => { const s = simBar(list, abil[i] + gaussN2() * 0.03, steep); arr.push({ isPlayer: false, code: LANE_CODES[l], name: KITS[LANE_CODES[l]].name, lane: l, best: s.best, fails: s.fails }); });
@@ -2905,9 +2912,14 @@ function drawTitle() {
   bigButton(W / 2 - 290, 256, 580, 78, '▶  TORNEO COMPLETO', '8 pruebas · puntos por puesto · gana el campeón', menu.sel === 0, () => { menu.sel = 0; titleConfirm(); });
   bigButton(W / 2 - 290, 346, 580, 78, 'TORNEO CLÁSICO', '100 m · salto largo · 110 m vallas', menu.sel === 1, () => { menu.sel = 1; titleConfirm(); });
   bigButton(W / 2 - 290, 436, 580, 78, 'PRUEBA SUELTA', 'elige una prueba y mejora tu marca', menu.sel === 2, () => { menu.sel = 2; titleConfirm(); });
-  LANE_CODES.forEach((c, i) => { const x = W / 2 - 150 + i * 80; drawFlag(ctx, c, x, 540, 56, 36); txt(c === 'CHI' ? 'TÚ' : c, x + 28, 592, 15, c === 'CHI' ? '#ffd166' : '#fff', 'center', '900'); });
-  txt('100 m · 400 m · 110 m vallas · salto largo · salto alto · garrocha · jabalina · martillo', W / 2, 628, 17, 'rgba(255,255,255,0.8)', 'center', '700');
-  txt('↑ ↓  elegir     ENTER / ESPACIO  confirmar     M  silencio     (también se puede tocar)', W / 2, 668, 16, 'rgba(255,255,255,0.6)', 'center', '700');
+  const dsel = menu.sel === 3;
+  pill(W / 2 - 160, 522, 320, 38, dsel ? 'rgba(58,116,255,0.9)' : 'rgba(8,10,32,0.7)', dsel ? 'rgba(255,230,140,0.9)' : 'rgba(255,255,255,0.35)');
+  txt('DIFICULTAD:  ', W / 2 - 30, 542, 16, 'rgba(255,255,255,0.75)', 'right', '800');
+  txt('◀ ' + DIFF_NAMES[DIFF] + ' ▶', W / 2 - 22, 542, 18, ['#7dffb0', '#ffd166', '#ff7a8a'][DIFF], 'left', '900');
+  addUI(W / 2 - 160, 522, 320, 38, () => { menu.sel = 3; titleConfirm(); });
+  LANE_CODES.forEach((c, i) => { const x = W / 2 - 150 + i * 80; drawFlag(ctx, c, x, 572, 56, 36); txt(c === 'CHI' ? 'TÚ' : c, x + 28, 622, 14, c === 'CHI' ? '#ffd166' : '#fff', 'center', '900'); });
+  txt('100 m · 400 m · 110 m vallas · salto largo · salto alto · garrocha · jabalina · martillo', W / 2, 650, 16, 'rgba(255,255,255,0.8)', 'center', '700');
+  txt('↑ ↓  elegir     ENTER / ESPACIO  confirmar     M  silencio     F  pantalla completa     (también se puede tocar)', W / 2, 682, 15, 'rgba(255,255,255,0.6)', 'center', '700');
 }
 
 /* ---------- selector de pruebas ---------- */
@@ -3098,7 +3110,7 @@ requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 window.__atl = {
   get state() { return state; }, get scene() { return scene; }, get EV() { return EV; }, get fps() { return fps; }, get race() { return race; }, get player() { return player; },
   get runners() { return runners; }, get best() { return best; }, get lj() { return lj; }, get tour() { return tour; }, get results() { return results; }, get cam() { return cam; },
-  set freeze(v) { FREEZE = v; }, setState(s) { state = s; }, snapCam() { cam = player.x * PPM - 460 + player.v * 10; }, startEvent, goTitle, goSelect, menu, action, jumpPress, escape, onTap, ljFinish, bests, HURDLES, BOARD, passPress, FIELD, EVENTS, get fe() { return fe; }, consts: () => ({ JV_LINE, JV_START, HJ_BAR, HJ_START, HJ_D, HJ_H, PV_IDEAL, PV_BOX, PV_H: typeof PV_H !== 'undefined' ? PV_H : null, HM_C }),
+  set freeze(v) { FREEZE = v; }, setState(s) { state = s; }, snapCam() { cam = player.x * PPM - 460 + player.v * 10; }, startEvent, goTitle, goSelect, menu, action, jumpPress, escape, onTap, ljFinish, bests, HURDLES, BOARD, passPress, FIELD, EVENTS, get fe() { return fe; }, get DIFF() { return DIFF; }, set DIFF(v) { DIFF = v; }, consts: () => ({ JV_LINE, JV_START, HJ_BAR, HJ_START, HJ_D, HJ_H, PV_IDEAL, PV_BOX, PV_H: typeof PV_H !== 'undefined' ? PV_H : null, HM_C }),
   simulate(rate, jitter, seed, ev, autoJump, jumpErr) {
     const rnd = mulberry(seed || 1);
     startEvent(ev || '100'); state = 'run'; race.t = 0; runners.forEach(r => r.k3 = 1);
